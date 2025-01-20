@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, send_file, make_response
+from flask import Flask, jsonify, request, send_from_directory, send_file, make_response, url_for
 import os
 import nbformat
 import base64
@@ -10,9 +10,7 @@ CORS(app)
 
 # Directorio donde están los documentos .ipynb
 DOCUMENTS_FOLDER = 'documentos'
-TEMP_IMAGES_FOLDER = 'temp_images'  # Carpeta temporal para las imágenes
 app.config['DOCUMENTS_FOLDER'] = DOCUMENTS_FOLDER
-app.config['TEMP_IMAGES_FOLDER'] = TEMP_IMAGES_FOLDER
 
 @app.route('/')
 def home():
@@ -54,13 +52,10 @@ def ver_contenido_documento(nombre):
                         elif 'data' in output:
                             if 'image/png' in output['data']:
                                 image_data = output['data']['image/png']
-                                image_path = os.path.join(TEMP_IMAGES_FOLDER, f'image_{nombre}_{i}.png')
-                                os.makedirs(TEMP_IMAGES_FOLDER, exist_ok=True)
-                                with open(image_path, 'wb') as img_file:
-                                    img_file.write(base64.b64decode(image_data))
+                                image_id = f"image_{nombre}_{i}.png"
                                 cell_data['salidas'].append({
                                     'tipo': 'imagen',
-                                    'contenido': f'/documentos/imagen_temp/image_{nombre}_{i}.png'
+                                    'contenido': url_for('obtener_imagen', image_id=image_id, _external=True)
                                 })
                             elif 'application/json' in output['data']:
                                 cell_data['salidas'].append({
@@ -85,10 +80,24 @@ def ver_contenido_documento(nombre):
     except Exception as e:
         return jsonify({'mensaje': str(e)}), 500
 
-@app.route('/documentos/imagen_temp/<filename>', methods=['GET'])
-def obtener_imagen_temp(filename):
+@app.route('/documentos/imagen/<image_id>', methods=['GET'])
+def obtener_imagen(image_id):
     try:
-        return send_file(os.path.join(TEMP_IMAGES_FOLDER, filename))
+        nombre, indice = image_id.split('_')[1:]
+        notebook_path = os.path.join(DOCUMENTS_FOLDER, nombre)
+
+        if os.path.exists(notebook_path):
+            with open(notebook_path, 'r', encoding='utf-8') as f:
+                notebook_content = nbformat.read(f, as_version=4)
+                cell = notebook_content.cells[int(indice)]
+
+                for output in cell.outputs:
+                    if 'image/png' in output['data']:
+                        image_data = output['data']['image/png']
+                        image_bytes = base64.b64decode(image_data)
+                        return make_response(send_file(BytesIO(image_bytes), mimetype='image/png'))
+
+        return jsonify({'mensaje': 'Imagen no encontrada'}), 404
     except Exception as e:
         return jsonify({'mensaje': str(e)}), 500
 
