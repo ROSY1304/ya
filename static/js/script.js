@@ -1,85 +1,57 @@
-// Función que se ejecuta cuando el DOM está listo
-document.addEventListener('DOMContentLoaded', function() {
-    fetchNotebooksList();
-});
+// URL del servidor Flask
+const serverUrl = 'https://ya-d4p3.onrender.com'; // Cambia esta URL por la URL de tu API desplegada
 
-// Función para obtener la lista de notebooks desde la API
-function fetchNotebooksList() {
-    fetch('https://ya-d4p3.onrender.com/documentos')
-        .then(response => response.json())
-        .then(data => {
-            const notebooksList = document.getElementById('notebooks-list');
-            notebooksList.innerHTML = ''; // Limpiar la lista antes de agregar los items
 
-            if (data.length === 0) {
-                notebooksList.innerHTML = '<li>No se encontraron archivos .ipynb</li>';
-                return;
-            }
-
-            // Agregar cada archivo a la lista
-            data.forEach(notebook => {
-                const li = document.createElement('li');
-                li.textContent = notebook;
-                li.onclick = () => fetchNotebookContent(notebook);
-                notebooksList.appendChild(li);
+// Obtener la lista de documentos .ipynb
+fetch(`${serverUrl}/documentos`)
+    .then(response => response.json())
+    .then(archivos => {
+        if (Array.isArray(archivos)) {
+            archivos.forEach(nombre => {
+                const link = document.createElement('button');
+                link.textContent = nombre;
+                link.onclick = () => cargarContenido(nombre);
+                document.body.appendChild(link);
             });
-        })
-        .catch(error => {
-            console.error('Error al obtener la lista de notebooks:', error);
-        });
-}
+        } else {
+            console.error(archivos.mensaje || "Error al obtener los documentos");
+        }
+    })
+    .catch(err => console.error('Error al obtener los documentos:', err));
 
-// Función para obtener el contenido de un notebook
-function fetchNotebookContent(notebookName) {
-    fetch(`https://ya-d4p3.onrender.com/documentos/contenido/${notebookName}`)
+// Cargar el contenido de un archivo .ipynb
+function cargarContenido(nombre) {
+    fetch(`${serverUrl}/documentos/contenido/${nombre}`)
         .then(response => response.json())
-        .then(data => {
-            const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = ''; // Limpiar contenido previo
+        .then(contenido => {
+            // Limpiar el área de visualización
+            const displayArea = document.getElementById('notebookContent');
+            displayArea.innerHTML = '';
 
-            // Mostrar el contenido de las celdas
-            data.forEach(cell => {
-                const cellDiv = document.createElement('div');
-                if (cell.tipo === 'código') {
-                    cellDiv.innerHTML = `
-                        <strong>Celda de Código:</strong>
-                        <pre>${cell.contenido}</pre>
-                    `;
+            contenido.forEach(celda => {
+                if (celda.tipo === 'texto') {
+                    const markdown = document.createElement('div');
+                    markdown.innerHTML = celda.contenido; // Renderizar el Markdown (puedes usar una librería como Showdown si quieres mejor formato)
+                    displayArea.appendChild(markdown);
+                } else if (celda.tipo === 'código') {
+                    const codeBlock = document.createElement('pre');
+                    codeBlock.textContent = celda.contenido;
+                    displayArea.appendChild(codeBlock);
 
-                    // Mostrar las salidas
-                    cell.salidas.forEach(salida => {
+                    celda.salidas.forEach(salida => {
                         if (salida.tipo === 'texto') {
-                            cellDiv.innerHTML += `
-                                <strong>Salida (Texto):</strong>
-                                <pre>${salida.contenido}</pre>
-                            `;
+                            const outputText = document.createElement('pre');
+                            outputText.textContent = salida.contenido;
+                            displayArea.appendChild(outputText);
                         } else if (salida.tipo === 'imagen') {
-                            cellDiv.innerHTML += `
-                                <strong>Salida (Imagen):</strong>
-                                <img src="data:image/png;base64,${salida.contenido}" alt="Imagen de salida"/>
-                            `;
-                        } else if (salida.tipo === 'json') {
-                            cellDiv.innerHTML += `
-                                <strong>Salida (JSON):</strong>
-                                <pre>${JSON.stringify(salida.contenido, null, 2)}</pre>
-                            `;
-                        } else if (salida.tipo === 'html') {
-                            cellDiv.innerHTML += `
-                                <strong>Salida (HTML):</strong>
-                                <div>${salida.contenido}</div>
-                            `;
+                            const img = document.createElement('img');
+                            img.src = `data:image/png;base64,${salida.contenido}`; // Decodificar base64 y mostrar imagen
+                            img.style.maxWidth = '100%'; // Ajustar tamaño de la imagen
+                            displayArea.appendChild(img);
                         }
                     });
-                } else if (cell.tipo === 'texto') {
-                    cellDiv.innerHTML = `
-                        <strong>Celda de Markdown:</strong>
-                        <pre>${cell.contenido}</pre>
-                    `;
                 }
-                contentDiv.appendChild(cellDiv);
             });
         })
-        .catch(error => {
-            console.error('Error al obtener el contenido del notebook:', error);
-        });
+        .catch(err => console.error('Error al cargar el contenido:', err));
 }
