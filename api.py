@@ -1,16 +1,18 @@
 from flask import Flask, jsonify, request, send_from_directory, render_template
 import os
 import nbformat
-from flask_cors import CORS  # Importa la extensión CORS
+import base64
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='static')
 
-# Habilitar CORS para la aplicación completa
-CORS(app)  # Esto permitirá que todas las rutas acepten solicitudes de otros dominios
+CORS(app)
 
 # Directorio donde están los documentos .ipynb
 DOCUMENTS_FOLDER = 'documentos'
+IMAGES_FOLDER = os.path.join('static', 'images')  # Carpeta para las imágenes
 app.config['DOCUMENTS_FOLDER'] = DOCUMENTS_FOLDER
+app.config['IMAGES_FOLDER'] = IMAGES_FOLDER
 
 @app.route('/')
 def home():
@@ -20,10 +22,8 @@ def home():
 def obtener_documentos():
     try:
         archivos = [f for f in os.listdir(DOCUMENTS_FOLDER) if f.endswith('.ipynb')]
-        
         if not archivos:
             return jsonify({"mensaje": "No hay archivos .ipynb en el directorio."}), 404
-        
         return jsonify(archivos), 200
     except FileNotFoundError:
         return jsonify({"mensaje": "No se encontró el directorio de documentos"}), 404
@@ -32,13 +32,12 @@ def obtener_documentos():
 def ver_contenido_documento(nombre):
     try:
         notebook_path = os.path.join(DOCUMENTS_FOLDER, nombre)
-        
         if os.path.exists(notebook_path) and nombre.endswith('.ipynb'):
             with open(notebook_path, 'r', encoding='utf-8') as f:
                 notebook_content = nbformat.read(f, as_version=4)
 
             contenido = []
-            for cell in notebook_content.cells:
+            for i, cell in enumerate(notebook_content.cells):
                 if cell.cell_type == 'code':
                     cell_data = {
                         'tipo': 'código',
@@ -46,7 +45,6 @@ def ver_contenido_documento(nombre):
                         'salidas': []
                     }
 
-                    # Procesar las salidas de la celda de código
                     for output in cell.outputs:
                         if 'text' in output:
                             cell_data['salidas'].append({
@@ -54,11 +52,15 @@ def ver_contenido_documento(nombre):
                                 'contenido': output['text']
                             })
                         elif 'data' in output:
-                            # Revisar si hay salida de imagen u otro tipo de datos
                             if 'image/png' in output['data']:
+                                image_data = output['data']['image/png']
+                                image_path = os.path.join(IMAGES_FOLDER, f'image_{nombre}_{i}.png')
+                                os.makedirs(IMAGES_FOLDER, exist_ok=True)
+                                with open(image_path, 'wb') as img_file:
+                                    img_file.write(base64.b64decode(image_data))
                                 cell_data['salidas'].append({
                                     'tipo': 'imagen',
-                                    'contenido': output['data']['image/png']
+                                    'contenido': f'/static/images/image_{nombre}_{i}.png'
                                 })
                             elif 'application/json' in output['data']:
                                 cell_data['salidas'].append({
@@ -71,7 +73,6 @@ def ver_contenido_documento(nombre):
                                     'contenido': output['data']['text/html']
                                 })
                     contenido.append(cell_data)
-                
                 elif cell.cell_type == 'markdown':
                     contenido.append({
                         'tipo': 'texto',
@@ -84,7 +85,5 @@ def ver_contenido_documento(nombre):
     except Exception as e:
         return jsonify({'mensaje': str(e)}), 500
 
-
-# Iniciar la aplicación
 if __name__ == '__main__':
     app.run(debug=True)
