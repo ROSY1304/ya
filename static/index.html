@@ -3,29 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proyecto</title>
+    <title>Regresión Lineal con 50k Datos</title>
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Regresion Lineal con 50k Datos</h1>
+        <header>
+            <h1>Regresión Lineal con 50k Datos</h1>
+        </header>
 
-        <!-- Lista de notebooks -->
-        <div>
-            <h3>India Condon</h3>
+        <!-- Sección de lista de notebooks -->
+        <section>
+            <h2>Notebooks Disponibles</h2>
+            <p>Seleccione un notebook para visualizar su contenido:</p>
             <ul id="notebooks-list">
                 <!-- La lista de notebooks se llenará dinámicamente -->
             </ul>
-        </div>
+        </section>
 
         <!-- Contenido del notebook -->
-        <div id="notebook-content">
-            <h3>NOTEBOOK</h3>
-            <div id="content"></div>
-        </div>
+        <section id="notebook-content">
+            <h2>Contenido del Notebook</h2>
+            <div id="content">
+                <p>Seleccione un notebook para visualizar su contenido aquí.</p>
+            </div>
+        </section>
     </div>
 
     <script src="static/js/script.js"></script>
 </body>
 </html>
-
