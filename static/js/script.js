@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Función para obtener la lista de notebooks desde la API
 function fetchNotebooksList() {
-    fetch('https://depopperrrr.onrender.com/documentos')
+    fetch('https://ya-d4p3.onrender.com/documentos')
         .then(response => response.json())
         .then(data => {
             const notebooksList = document.getElementById('notebooks-list');
@@ -31,7 +31,7 @@ function fetchNotebooksList() {
 
 // Función para obtener el contenido de un notebook
 function fetchNotebookContent(notebookName) {
-    fetch(`https://depopperrrr.onrender.com/documentos/contenido/${notebookName}`)
+    fetch(`https://ya-d4p3.onrender.com/documentos/contenido/${notebookName}`)
         .then(response => response.json())
         .then(data => {
             const contentDiv = document.getElementById('content');
